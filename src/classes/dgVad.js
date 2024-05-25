@@ -1,5 +1,6 @@
-const EventEmitter = require("events");
-const { LiveTranscriptionEvents, createClient } = require("@deepgram/sdk");
+// version of deepgram - 3.2.0
+import { EventEmitter } from 'events';
+import { LiveTranscriptionEvents, createClient } from '@deepgram/sdk';
 
 class Transcriber extends EventEmitter {
     constructor(config) {
@@ -36,7 +37,7 @@ class Transcriber extends EventEmitter {
         }
         );
 
-        this.deepgramLive.addListener("error", (error) => console.error(error));
+        //  this.deepgramLive.addListener("error", (error) => console.error(error));
 
         this.deepgramLive.on(LiveTranscriptionEvents.Error, (error) =>
             console.error(error)
@@ -117,4 +118,4 @@ class Transcriber extends EventEmitter {
     }
 }
 
-module.exports = Transcriber;
+export default Transcriber;

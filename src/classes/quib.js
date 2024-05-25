@@ -1,93 +1,45 @@
-const EventEmitter = require("events");
-const WebSocket = require("ws");
+import { EventEmitter } from "events";
 
 class Quib extends EventEmitter {
-    constructor(config) {
+    constructor({ host, uid }) {
         super();
         this.counter = 0;
-        this.host = config.host;
-        this.uid = config.uid;
+        this.host = host;
+        this.uid = uid;
         this.ws = new WebSocket(`wss://${this.host}/home?uid=${this.uid}`);
 
-        this.ws.on("open", () => {
+        this.eventHandlers = {
+            media: (media) => this.emit("media", media.payload),
+            mark: () => this.emit("mark", "audio data completely received"),
+            clear: () => this.emit("clear", "Clear current media stream , up until mark event"),
+            userText: (text) => this.emit("userText", text),
+            assistantText: (text) => this.emit("assistantText", text),
+            endCall: () => this.emit("endCall", "Conversation end is found")
+        };
+
+        this.ws.onopen = () => {
             console.log(`Connected to ${this.host}`);
             this.emit("connected", "websocket connection created");
-        });
+        };
 
-        this.ws.on("message", (data) => {
-            const { event, media, text } = JSON.parse(data);
-            switch (event) {
-                case "media":
-                    /*
-                        this will emit a media event
-                        it will contain mp3 bufferData
-                    */
-                    this.emit("media", media.payload);
-
-                    break;
-                case "mark":
-                    /*
-                        this will emit a mark event
-                        it will mark the end of audio data for the current counter
-                    */
-                    this.emit("mark", "audio data completely received");
-
-                    break;
-                case "clear":
-                    /*
-                        this will emit a clear event
-                        it will tell the user when to clear the audio queue 
-                    */
-                    this.emit(
-                        "clear",
-                        "Clear current media stream , up until mark event"
-                    );
-
-                    break;
-                case "userText":
-                    /*
-                        this will emit a userText event
-                        it will contain a string of text that is passed to LLM
-                    */
-                    this.emit("userText", text);
-
-                    break;
-                case "assistantText":
-                    /*
-                        this will emit a assistantText event
-                        it will contain a string of text that is returned by LLM
-                    */
-                    this.emit("assistantText", text);
-
-                    break;
-                case "endCall":
-                    /*
-                        this will emit a media event
-                        it will contain mp3 bufferData
-                    */
-                    this.emit("endCall", "Conversation end is found");
-
-                    break;
-                default:
-                    /*
-                        this will not emit any event
-                        if this point is reached, please contact support@quibbleai.io to get more info
-                    */
-                    console.log(
-                        `Unknown event (${event}) caught by websocket, contact support@quibbleai.io to get more info`
-                    );
-                    break;
+        this.ws.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            const handler = this.eventHandlers[data.event];
+            if (handler) {
+                handler(data);
+            } else {
+                console.log(`Unknown event (${data.event}) caught by websocket, contact support@quibbleai.io to get more info`);
             }
             this.counter++;
-        });
+        };
 
-        this.ws.on("error", (error) => {
+        this.ws.onerror = (error) => {
             console.error(`WebSocket error: ${error}`);
-        });
+        };
 
-        this.ws.on("close", (code, reason) => {
+        this.ws.onclose = ({ code, reason }) => {
             console.log(`WebSocket closed. Code: ${code}, Reason: ${reason}`);
-        });
+        };
     }
 
     sendData(event, data = {}) {
@@ -120,13 +72,8 @@ class Quib extends EventEmitter {
     }
 
     send(data) {
-        if (this.ws.readyState === WebSocket.OPEN) {
-            this.ws.send(JSON.stringify(data));
-            this.counter++;
-        } else {
-            console.error("Cannot send data, WebSocket is not open");
-        }
+        this.sendData(data.event, data);
     }
 }
 
-module.exports = Quib;
+export default Quib;
