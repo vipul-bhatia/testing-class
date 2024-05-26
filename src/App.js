@@ -11,7 +11,7 @@ function App() {
   // const { add, remove, first, size, queue, clear } = useQueue([]);
 
   const quib = new Quib({ host: 'quibbleai.io:8888', uid: uuidv4() });
-  const transcriber = new Transcriber({ apiKey: '656759acdbd9f56cf70b91f71f38cd2eddacf5c4' })
+  const transcriber = new Transcriber({ apiKey: '' })
   transcriber.on('transcription', (text) => {
     console.log(text)
   })
